@@ -1,0 +1,23 @@
+# CI — reusable workflow (called by pipeline.yml; not triggered on its own).
+# Unit/mock tests only: config + schema validation + pure functions. No Google Cloud creds.
+# Edit this file to change what "CI" means; the orchestrator (pipeline.yml) decides WHEN it runs.
+name: CI
+
+on:
+  workflow_call:
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements-dev.txt
+      - name: Lint
+        run: ruff check tests/
+      - name: Unit tests
+        run: pytest tests/ -v

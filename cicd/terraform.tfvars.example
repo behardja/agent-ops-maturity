@@ -1,0 +1,10 @@
+# Copy to terraform.tfvars and edit — OR set these in ../configs/defaults.yaml instead
+# (project.id / project.region / cicd.github_repo), which wif.tf reads by default.
+#
+# project_id / region fall back to ../configs/defaults.yaml. github_repo falls back to
+# its cicd.github_repo. The one value you MUST supply (here or in defaults.yaml) is
+# github_repo. Apply once per project (run again with a prod project_id for prod).
+
+# github_repo = "my-org/agent-ops-maturity"   # owner/repo allowed to deploy (NOT a secret)
+# project_id  = "sandbox-401718"              # omit to use defaults.yaml project.id
+# region      = "us-central1"                 # omit to use defaults.yaml project.region

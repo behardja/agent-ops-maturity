@@ -1,0 +1,55 @@
+# Canary safety net — the FAST "protect" reaction to drift.
+#
+# This is the TWIN of alert.yaml, and the two MUST stay distinct so they never
+# collide on the same signal:
+#
+#   * alert.yaml  -> SLOW improve path: a rolling 1h mean over ALL production
+#                    traffic. A sustained drop fires loop/run_ct_loop.py to
+#                    hill-climb a better candidate. Topic: <agent>-loop-trigger.
+#   * THIS file   -> FAST protect path: a tight window scoped to the CANARY
+#                    revision only. A fresh canary that scores badly is reverted
+#                    immediately by deployment/rollback.py — no climbing, just
+#                    revert. Topic: <agent>-rollback-trigger.
+#
+# Two scopes, two topics, two reactions. The canary alert is short-window so it
+# catches a bad revision during its bake before much traffic sees it; the prod
+# drift alert is long-window so it only reacts to genuine sustained decay.
+#
+# REVISION SCOPING: a canary-scoped signal needs the score time series labeled by
+# revision. The managed Agent Runtime tags its logs with the serving revision, so
+# the canary metric filter below pins metric.label.revision to the canary revision
+# id. NB4 substitutes CANARY_REVISION at deploy time (it knows the id it just
+# rolled out) — the same placeholder-substitution pattern alert.yaml uses for
+# PROJECT_ID / CHANNEL_ID.
+#
+# Rolling back (traffic-split / revision management) is an API-only Public Preview
+# capability — confirm availability; the fallback is a full redeploy of the prior
+# known-good revision (see deployment/rollback.py).
+#
+# Illustrative shape of a google_monitoring_alert_policy.
+
+displayName: "Brand checker — canary Final Response Quality breach (auto-rollback)"
+combiner: OR
+conditions:
+  - displayName: "Canary 10m mean Final Response Quality < 0.7"
+    conditionThreshold:
+      # Same GA log-based metric as the prod alert, but scoped to the canary
+      # revision only (metric.label.revision), over a short bake window.
+      filter: >-
+        metric.type="logging.googleapis.com/user/brand_guidelines_checker_final_response_quality"
+        resource.type="global"
+        metric.label.revision="CANARY_REVISION"
+      aggregations:
+        - alignmentPeriod: 600s
+          perSeriesAligner: ALIGN_DELTA
+          crossSeriesReducer: REDUCE_MEAN
+      comparison: COMPARISON_LT
+      thresholdValue: 0.7
+      duration: 0s
+notificationChannels:
+  # A Pub/Sub channel on <agent>-rollback-trigger that invokes the rollback
+  # subscriber (deployment/rollback_subscriber/) -> deployment/rollback.py.
+  - "projects/PROJECT_ID/notificationChannels/CHANNEL_ID"
+documentation:
+  content: "Fresh canary revision is scoring below threshold. Fires automatic rollback to the prior known-good revision (deployment/rollback.py). This protects STAGING; production promotion is a separate manual gate and is never auto-rolled here."
+  mimeType: "text/markdown"

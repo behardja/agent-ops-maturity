@@ -1,0 +1,30 @@
+# GA log-based metric — the always-available Final Response Quality signal the drift alert
+# watches. This is the notebook-path equivalent of the google_logging_metric
+# "final_response_quality" resource in terraform/modules/agent_ops/observability.tf; the two
+# define the same metric, so whichever path you run, the alert in alert.yaml fires
+# off the same time series.
+#
+# It extracts the per-case Final Response Quality score that run_eval emits as structured
+# logs (jsonPayload.metric="final_response_quality", jsonPayload.agent="<agent>",
+# jsonPayload.score=<0..1>) into a DISTRIBUTION metric. On the managed Agent
+# Runtime those stdout lines are captured into Cloud Logging, which feeds this
+# metric; a purely local eval run does not reach Cloud Logging.
+#
+# Created with:
+#   gcloud logging metrics create brand_guidelines_checker_final_response_quality \
+#     --config-from-file=metric.yaml --project $PROJECT
+#
+# Queried as: logging.googleapis.com/user/brand_guidelines_checker_final_response_quality
+
+name: brand_guidelines_checker_final_response_quality
+description: "Final Response Quality (per scored case) for brand-guidelines-checker"
+filter: 'jsonPayload.metric="final_response_quality" jsonPayload.agent="brand-guidelines-checker"'
+valueExtractor: "EXTRACT(jsonPayload.score)"
+metricDescriptor:
+  metricKind: DELTA
+  valueType: DISTRIBUTION
+  unit: "1"
+  displayName: "brand-guidelines-checker — Final Response Quality (per scored case)"
+bucketOptions:
+  explicitBuckets:
+    bounds: [0.0, 0.25, 0.5, 0.7, 0.85, 1.0]

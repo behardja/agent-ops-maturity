@@ -1,0 +1,13 @@
+# The subscriber runs the loop driver, which inferences + evaluates the agent and
+# (unattended) redeploys it — so it needs functions-framework plus the *engine*
+# stack. Unlike the agent's serving container (pinned at aiplatform 1.133.0), the
+# loop runs **managed Agent Evaluation** (default eval.engine), which needs
+# aiplatform>=1.154.0 with the [evaluation] extra + pandas. 1.154.0 pulls
+# google-genai 2.7 (adk 1.26 declares <2.0) — a pip resolver WARNING only; the adk
+# agent run validates cleanly under genai 2.7 in-process. Set eval.engine=local to
+# fall back to the ADK engine (then 1.133.0 suffices, matching the agent container).
+functions-framework==3.*
+google-adk==1.26.0
+google-cloud-aiplatform[agent-engines,evaluation]==1.154.0
+pandas
+pyyaml

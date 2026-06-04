@@ -1,0 +1,9 @@
+name: "brand-guidelines-checker"
+acli_version: "0.3.0"
+agent_directory: "app"
+region: "us-central1"
+base_template: "adk"
+language: "python"
+create_params:
+  deployment_target: "agent_runtime"
+  cicd_runner: "skip"

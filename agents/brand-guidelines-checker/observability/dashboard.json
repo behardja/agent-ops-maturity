@@ -1,0 +1,68 @@
+{
+  "_comment": "Illustrative Cloud Monitoring dashboard for the brand checker. Pairs the quality signal (Final Response Quality from the online monitor) with the operational metrics Agent Runtime emits (request count, latency). Import via the Monitoring console or gcloud monitoring dashboards create.",
+  "displayName": "Agent Ops L1 — Brand Checker Overview",
+  "mosaicLayout": {
+    "columns": 12,
+    "tiles": [
+      {
+        "width": 6, "height": 4,
+        "widget": {
+          "title": "Final Response Quality (online monitor, 5% sample)",
+          "xyChart": {
+            "dataSets": [{
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"custom.googleapis.com/agent/final_response_quality\" resource.type=\"aiplatform.googleapis.com/ReasoningEngine\"",
+                  "aggregation": { "alignmentPeriod": "3600s", "perSeriesAligner": "ALIGN_MEAN" }
+                }
+              }
+            }],
+            "thresholds": [{ "value": 0.7, "label": "drift threshold" }]
+          }
+        }
+      },
+      {
+        "width": 6, "height": 4, "xPos": 6,
+        "widget": {
+          "title": "Request count",
+          "xyChart": {
+            "dataSets": [{
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"aiplatform.googleapis.com/reasoning_engine/request_count\" resource.type=\"aiplatform.googleapis.com/ReasoningEngine\"",
+                  "aggregation": { "alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_RATE" }
+                }
+              }
+            }]
+          }
+        }
+      },
+      {
+        "width": 6, "height": 4, "yPos": 4,
+        "widget": {
+          "title": "Request latency (p95)",
+          "xyChart": {
+            "dataSets": [{
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"aiplatform.googleapis.com/reasoning_engine/request_latencies\" resource.type=\"aiplatform.googleapis.com/ReasoningEngine\"",
+                  "aggregation": { "alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_PERCENTILE_95" }
+                }
+              }
+            }]
+          }
+        }
+      },
+      {
+        "width": 6, "height": 4, "xPos": 6, "yPos": 4,
+        "widget": {
+          "title": "Output variance (behavioral, logged not thresholded)",
+          "text": {
+            "content": "Per-run output-variance metric from eval (same input run N times). Tracked for stability, never a pass/fail threshold. See eval/ and docs/ct-loop-runbook.md.",
+            "format": "MARKDOWN"
+          }
+        }
+      }
+    ]
+  }
+}

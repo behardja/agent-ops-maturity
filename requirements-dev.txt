@@ -1,0 +1,8 @@
+# Dev / CI dependencies. Installs the agent's runtime stack (so the eval/loop modules
+# import) plus the test + lint tooling. CI installs this; it needs NO Google Cloud creds
+# because the unit tests don't make cloud calls.
+-r agents/brand-guidelines-checker/requirements.txt
+pytest>=8
+PyYAML>=6
+pandas>=2
+ruff>=0.6

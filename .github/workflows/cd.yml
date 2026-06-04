@@ -1,0 +1,78 @@
+# CD — reusable workflow (called by pipeline.yml; not triggered on its own).
+# Builds + deploys the agent (source/container deploy) to STAGING, gates on the managed eval,
+# then promotes to PRODUCTION behind a manual approval. Keyless auth via WIF (inputs below).
+# Edit this file to change what "CD" does; the orchestrator (pipeline.yml) decides WHEN it runs.
+name: CD
+
+on:
+  workflow_call:
+    inputs:
+      project_id:                 { required: true, type: string }
+      region:                     { required: true, type: string }
+      agent_dir:                  { required: true, type: string }
+      workload_identity_provider: { required: true, type: string }
+      service_account:            { required: true, type: string }
+
+permissions:
+  contents: read
+  id-token: write   # keyless WIF
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ inputs.project_id }}
+          workload_identity_provider: ${{ inputs.workload_identity_provider }}
+          service_account: ${{ inputs.service_account }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - name: Deploy to staging (source/container)
+        run: python deployment/deploy_agent.py --source --project "${{ inputs.project_id }}" --region "${{ inputs.region }}" --agent-dir "${{ inputs.agent_dir }}"
+      - name: Managed-eval gate
+        env:
+          AGENT_DIR: ${{ inputs.agent_dir }}
+        run: |
+          python eval_tool/run_eval.py --engine managed --agent-dir "$AGENT_DIR" --out /tmp/eval.json
+          python - <<'PY'
+          import json, os
+          ad = os.environ["AGENT_DIR"]
+          result = json.load(open("/tmp/eval.json"))
+          criteria = json.load(open(f"{ad}/eval/criteria.json"))
+          threshold = ((criteria.get("criteria") or {})
+                       .get("rubric_based_final_response_quality_v1") or {}).get("threshold", 0.8)
+          frq = result.get("final_response_quality", 0.0)
+          print(f"final_response_quality={frq} threshold={threshold}")
+          raise SystemExit(0 if frq >= threshold else 1)   # non-zero -> blocks promotion
+          PY
+      - name: Agent Identity & least-privilege gate (described — not yet enforced)
+        run: |
+          echo "Post-deploy gate (described): verify the deployed agent's Agent Identity (SPIFFE)"
+          echo "is issued and that IAM on its principal stays least-privilege before promoting."
+          echo "Runtime SPIFFE verification needs the live agent (a partly-Preview surface); the"
+          echo "static least-privilege lint already ran in CI (tests/test_identity.py). See NB6."
+
+  deploy-production:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production   # add a "required reviewers" rule -> manual approval gate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ inputs.project_id }}
+          workload_identity_provider: ${{ inputs.workload_identity_provider }}
+          service_account: ${{ inputs.service_account }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - name: Promote to production
+        run: python deployment/deploy_agent.py --source --project "${{ inputs.project_id }}" --region "${{ inputs.region }}" --agent-dir "${{ inputs.agent_dir }}"

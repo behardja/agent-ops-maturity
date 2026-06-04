@@ -1,0 +1,39 @@
+# Auto-trigger into the loop — a Cloud Monitoring alert policy on the Final
+# Response Quality score time series.
+#
+# It watches the GA log-based metric defined in metric.yaml
+# (logging.googleapis.com/user/brand_guidelines_checker_final_response_quality), the same
+# metric terraform/modules/agent_ops/observability.tf declares — so the notebook
+# path and the Terraform path fire off identical signals, with no Preview
+# dependency.
+#
+# This is the ONLINE (recommended) trigger source: it catches real production
+# decay, including novel inputs the golden set doesn't cover. The other
+# automatic source is a SCHEDULED OFFLINE eval on the golden set (lightest
+# entry); either can notify a channel and/or invoke the loop. The third entry
+# point is a human running the loop on demand. All three reach the same four
+# steps.
+#
+# Illustrative shape of a google_monitoring_alert_policy.
+
+displayName: "Brand checker — Final Response Quality drift"
+combiner: OR
+conditions:
+  - displayName: "Rolling 1h mean Final Response Quality < 0.7"
+    conditionThreshold:
+      # GA log-based Final Response Quality metric (see metric.yaml / observability.tf).
+      filter: 'metric.type="logging.googleapis.com/user/brand_guidelines_checker_final_response_quality" resource.type="global"'
+      aggregations:
+        - alignmentPeriod: 3600s
+          perSeriesAligner: ALIGN_DELTA
+          crossSeriesReducer: REDUCE_MEAN
+      comparison: COMPARISON_LT
+      thresholdValue: 0.7
+      duration: 0s
+notificationChannels:
+  # A channel that notifies humans AND/OR a webhook/Cloud Function that invokes
+  # loop/run_ct_loop.py to start the Continuous-Iteration loop automatically.
+  - "projects/PROJECT_ID/notificationChannels/CHANNEL_ID"
+documentation:
+  content: "Final Response Quality dropped below threshold. Fires the Continuous-Iteration loop (loop/run_ct_loop.py)."
+  mimeType: "text/markdown"

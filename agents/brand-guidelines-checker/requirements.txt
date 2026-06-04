@@ -1,0 +1,13 @@
+# Pinned to the locally-validated stack — keep the container == the deploying env
+# (the notebooks) to avoid cloudpickle/version skew that can make agent_engines.create
+# fail to register a revision (server-side 500). Bump deliberately + re-validate.
+#
+# google-adk 1.34.2: the latest 1.x. Chosen because (a) it ships the GEPA prompt
+# optimizer (google.adk.optimization.gepa_root_agent_prompt_optimizer) used by the
+# hill-climb step, absent before 1.30.0; and (b) it deploys + RUNS cleanly in Agent
+# Engine (verified 2026-06-03) — the older "newer-adk crashes the runtime via
+# runners.py self.agent.mode" problem is fixed here, so the previous 1.26.0 pin is lifted.
+# Runs fine with the env's google-genai 2.7 despite adk's declared <2 (a pip warning only).
+# aiplatform stays 1.154.0 to match the deploy-time SDK.
+google-adk==1.34.2
+google-cloud-aiplatform[agent-engines]==1.154.0

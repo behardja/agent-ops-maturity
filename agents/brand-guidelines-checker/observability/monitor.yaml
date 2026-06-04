@@ -1,0 +1,30 @@
+# Online monitor — the detection half of the loop.
+#
+# Console path: Agent Platform > Agents > Evaluation > Online monitors > New
+# monitor. The monitor polls Cloud Trace every ~10 min, scores sampled traces
+# via the Evaluation Service, writes results to Cloud Logging, and exports
+# numeric scores to Cloud Monitoring.
+#
+# Cost note: each scored trace = one LLM judge call.
+# This YAML is an illustrative declaration of the monitor's intent; create the
+# monitor via the console or the Eval SDK and keep this as the source of truth.
+
+apiVersion: agentplatform/v1
+kind: OnlineMonitor
+metadata:
+  name: brand-checker-final-response-quality
+spec:
+  agentEngine: brand-guidelines-checker      # the deployed ReasoningEngine
+  sampling:
+    # 5% to start. Revisit if traffic is low enough that 5% yields too few
+    # scored traces/hour to be a stable signal — the real anchor is
+    # scored-traces-per-hour, not the bare percentage.
+    percentage: 5
+  pollIntervalMinutes: 10
+  raters:
+    # The single L1 rater. Same Final Response Quality rater the offline threshold
+    # uses, so monitor and threshold share one definition of "success".
+    - criterion: rubric_based_final_response_quality_v1
+  sinks:
+    logging: true        # results -> Cloud Logging
+    monitoring: true     # numeric scores -> Cloud Monitoring (feeds the alert)

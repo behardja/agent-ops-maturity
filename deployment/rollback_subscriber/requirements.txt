@@ -1,0 +1,9 @@
+# The rollback subscriber shifts traffic back to a known-good revision via
+# deployment/rollback.py (agents-cli deploy --traffic 100), so it needs the same
+# pinned stack the agent serves on plus functions-framework to receive the
+# CloudEvent. Keep these in lockstep with agents/<name>/requirements.txt and
+# deployment/loop_subscriber/requirements.txt.
+functions-framework==3.*
+google-adk==1.26.0
+google-cloud-aiplatform[agent-engines]==1.133.0
+pyyaml

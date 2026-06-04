@@ -1,0 +1,17 @@
+# Copy to terraform.tfvars and edit. Project/region fall back to
+# ../configs/defaults.yaml. Per-agent settings live in agents/<name>/agent.yaml,
+# NOT here. Minimum: set project_id (or set it in defaults.yaml).
+
+project_id = "your-project"
+# region   = "us-central1"
+
+# Route every agent's drift alert to a human (optional — alerts fire regardless).
+# notification_email = "you@example.com"
+
+# --- Feature gates, applied to all agents (safe defaults shown) ---
+# Run the managed Agent Runtime deploy from terraform (source/container; needs the Python deps + auth):
+# deploy_agent = true
+# Create the Preview online monitor (confirm availability first):
+# enable_online_monitor = true
+# Scheduled offline-eval trigger (lightest entry) is on by default:
+# enable_scheduled_eval = true

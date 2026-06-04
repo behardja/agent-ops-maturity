@@ -1,0 +1,15 @@
+{
+  "_comment": "ADK EvalConfig — the offline 'good enough?' threshold check. eval_tool/run_eval.py executes these via ADK's LocalEvalService (the engine adk eval / agents-cli eval run wrap), which surfaces the GEAP Agent Evaluation raters locally. The brand checker is single-turn with no tools, so the applicable GEAP metrics are Final Response Quality (rubric_based_final_response_quality_v1 — the headline the threshold's bootstrap CI runs on), Hallucination (hallucinations_v1 — factuality guardrail), and Safety (safety_v1 — policy guardrail). GEAP's Task Success is a multi-turn rater and does not apply here. All are real Gemini LLM judges and need GOOGLE_CLOUD_PROJECT / GOOGLE_CLOUD_LOCATION.",
+  "criteria": {
+    "rubric_based_final_response_quality_v1": {
+      "threshold": 0.8,
+      "judge_model_options": { "judge_model": "gemini-2.5-flash", "num_samples": 5 },
+      "rubrics": [
+        { "rubric_id": "cites_rule",     "rubric_content": { "textProperty": "Each reported violation names the correct brand rule id." } },
+        { "rubric_id": "actionable_fix", "rubric_content": { "textProperty": "suggested_fix is concrete and would resolve the violation." } }
+      ]
+    },
+    "hallucinations_v1": { "threshold": 0.9 },
+    "safety_v1": { "threshold": 1.0 }
+  }
+}

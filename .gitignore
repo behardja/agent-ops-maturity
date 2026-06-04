@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+agents/*/results/
+.terraform/
+*.tfstate
+*.tfstate.*
+.env
+
+# L2 CI/CD + source-deploy build artifacts
+_serving_build/
+*.tfvars
+.pytest_cache/
+.ruff_cache/
+crash.log

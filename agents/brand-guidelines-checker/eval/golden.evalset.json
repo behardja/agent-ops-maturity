@@ -1,0 +1,105 @@
+{
+  "_comment": "Golden evalset for the brand checker. Each case is one regression test; Final Response Quality grades whether the agent's verdict matches expected. Seeded by hand to cover each rule (PASS + FAIL, single + multi-violation), then GROWN from triage: every genuine production failure the monitor flags becomes a new case (see docs/ct-loop-runbook.md). Brand rules: 1=no hype words; 2=no specific savings amounts / 'guaranteed'; 3=named discounts need 'while supplies last'; 4=sentence case, no ALL CAPS; 5=address as 'you', not 'consumers'/'users'. A larger set keeps the Final Response Quality metric low-variance so the drift threshold + prompt optimizer have a reliable signal.",
+  "eval_cases": [
+    {
+      "id": "hype-word-fail",
+      "input": "Our revolutionary new blender is best-in-class.",
+      "expected": { "verdict": "FAIL", "violations": [{ "rule": 1 }] }
+    },
+    {
+      "id": "clean-copy-pass",
+      "input": "You'll love how quiet this blender is. On sale now, while supplies last.",
+      "expected": { "verdict": "PASS", "violations": [] }
+    },
+    {
+      "id": "discount-missing-disclaimer",
+      "input": "Save big on every coffee maker this weekend.",
+      "expected": { "verdict": "FAIL", "violations": [{ "rule": 3 }] }
+    },
+    {
+      "id": "guaranteed-savings-fail",
+      "input": "Guaranteed to save you $50 on your first order.",
+      "expected": { "verdict": "FAIL", "violations": [{ "rule": 2 }] }
+    },
+    {
+      "id": "all-caps-headline-fail",
+      "input": "BIGGEST SALE EVER on kitchen essentials.",
+      "expected": { "verdict": "FAIL", "violations": [{ "rule": 4 }] }
+    },
+    {
+      "id": "consumers-wording-fail",
+      "input": "Consumers trust our cookware every day.",
+      "expected": { "verdict": "FAIL", "violations": [{ "rule": 5 }] }
+    },
+    {
+      "id": "plain-pass",
+      "input": "Your morning just got easier with our new drip coffee maker.",
+      "expected": { "verdict": "PASS", "violations": [] }
+    },
+    {
+      "id": "warm-tone-pass",
+      "input": "We think you'll enjoy the gentle hum of this quiet blender.",
+      "expected": { "verdict": "PASS", "violations": [] }
+    },
+    {
+      "id": "no-claims-pass",
+      "input": "This kettle heats water fast and keeps it warm for you.",
+      "expected": { "verdict": "PASS", "violations": [] }
+    },
+    {
+      "id": "sentence-case-pass",
+      "input": "Our new cookware set is here for you.",
+      "expected": { "verdict": "PASS", "violations": [] }
+    },
+    {
+      "id": "discount-with-disclaimer-pass",
+      "input": "Save big on blenders this weekend, while supplies last.",
+      "expected": { "verdict": "PASS", "violations": [] }
+    },
+    {
+      "id": "hype-unbeatable-fail",
+      "input": "An unbeatable, game-changing toaster you have to see.",
+      "expected": { "verdict": "FAIL", "violations": [{ "rule": 1 }] }
+    },
+    {
+      "id": "guaranteed-word-fail",
+      "input": "Guaranteed results or your money back.",
+      "expected": { "verdict": "FAIL", "violations": [{ "rule": 2 }] }
+    },
+    {
+      "id": "savings-amount-fail",
+      "input": "Order today and pocket a full $40 in savings.",
+      "expected": { "verdict": "FAIL", "violations": [{ "rule": 2 }] }
+    },
+    {
+      "id": "discount-percent-no-disclaimer-fail",
+      "input": "Get 30% off all cookware today.",
+      "expected": { "verdict": "FAIL", "violations": [{ "rule": 3 }] }
+    },
+    {
+      "id": "all-caps-fail-2",
+      "input": "SHOP NOW FOR GREAT KITCHEN TOOLS.",
+      "expected": { "verdict": "FAIL", "violations": [{ "rule": 4 }] }
+    },
+    {
+      "id": "users-wording-fail",
+      "input": "Users love how easy our espresso machine is.",
+      "expected": { "verdict": "FAIL", "violations": [{ "rule": 5 }] }
+    },
+    {
+      "id": "multi-hype-caps-fail",
+      "input": "REVOLUTIONARY BLENDER YOU'LL LOVE.",
+      "expected": { "verdict": "FAIL", "violations": [{ "rule": 1 }, { "rule": 4 }] }
+    },
+    {
+      "id": "multi-amount-consumers-fail",
+      "input": "Consumers save a guaranteed $100 with us.",
+      "expected": { "verdict": "FAIL", "violations": [{ "rule": 2 }, { "rule": 5 }] }
+    },
+    {
+      "id": "multi-discount-caps-fail",
+      "input": "40% OFF COOKWARE THIS WEEK.",
+      "expected": { "verdict": "FAIL", "violations": [{ "rule": 3 }, { "rule": 4 }] }
+    }
+  ]
+}

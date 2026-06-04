@@ -1,0 +1,24 @@
+# Per-agent config. Each agent under agents/<name>/ owns one of these.
+# Adding an agent = a new folder with this file + agent.py + eval/ + observability/.
+# Global fallbacks (project id, region) live in ../../configs/defaults.yaml.
+
+name: brand-guidelines-checker
+display_name: Brand Guidelines Checker   # human-readable name shown in Agent Runtime / Registry
+description: Single-turn retail brand-guidelines checker (Agent Ops L1 example).
+model: gemini-2.5-flash      # baseline model; the loop's model knob overrides via MODEL
+
+eval:
+  engine: managed           # "managed" = GCP Agent Evaluation (client.evals.evaluate); "local" = ADK LocalEvalService
+  location: global          # eval/judge endpoint (deploy/teardown stay regional)
+  policy: match             # threshold rule: "match" within the noise band (default) or "beat"
+  num_runs: 3               # inference repeats averaged per case (denoise the LLM-judge noise)
+  bootstrap_resamples: 2000
+  # dest: gs://<project>-<agent>-artifacts/eval-runs   # tracked-run GCS prefix; defaults here when unset
+
+monitor:
+  sampling_percentage: 5     # online monitor sample rate to start
+  poll_interval_minutes: 10
+  drift_threshold: 0.7       # rolling 1h mean Final Response Quality below this fires the loop
+
+deploy:
+  canary_traffic: 10         # percent routed to a new revision on deploy
