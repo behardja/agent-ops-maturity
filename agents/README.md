@@ -10,7 +10,7 @@ agents-cli create <name> -o agents/ -a adk -d agent_runtime --cicd-runner skip -
 ```
 - Writes `agents/<name>/app/` + `agents-cli-manifest.yaml` + `pyproject.toml`.
 - Set `region: us-central1` in the manifest.
-- Then add the maturity layer (below). Claude Code users: run `/add-agent`.
+- Then add the maturity layer (below). An AI coding assistant can do this by following `skills/add-agent.md`.
 
 ## Path 2 — bring your own (match the structure)
 

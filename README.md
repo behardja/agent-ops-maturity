@@ -104,7 +104,7 @@ The repo scales by folders. Each agent is an **agents-cli project** (the officia
 3. Re-run `terraform apply` — `terraform/main.tf` discovers the folder via `fileset()` and instantiates the `agent_ops` module for it (its own SA, bucket, metric, alert, trigger topic, dashboard).
 4. Drive it with the shared engine by passing `--agent-dir agents/<name>` to `eval_tool/run_eval.py`, `loop/run_ct_loop.py`, and `deployment/deploy_agent.py` (deploy defaults to `agents-cli deploy`).
 
-> Claude Code users: run **`/add-agent`** (or "follow `skills/add-agent.md`") to do steps 1–2 automatically.
+> Tip: point an AI coding assistant at **`skills/add-agent.md`** to do steps 1–2 automatically.
 
 ## Repo folder structure
 
