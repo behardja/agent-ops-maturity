@@ -44,27 +44,37 @@ import yaml
 
 from google.genai import types as genai_types
 
-from google.adk.evaluation.base_eval_service import (
-    EvaluateConfig,
-    EvaluateRequest,
-    InferenceConfig,
-    InferenceRequest,
-)
-from google.adk.evaluation.eval_case import Invocation
-from google.adk.evaluation.eval_config import (
-    EvalConfig,
-    get_eval_metrics_from_config,
-)
-from google.adk.evaluation.eval_set import EvalCase, EvalSet
-from google.adk.evaluation.evaluator import EvalStatus
-from google.adk.evaluation.in_memory_eval_sets_manager import (
-    InMemoryEvalSetsManager,
-)
-from google.adk.evaluation.local_eval_service import LocalEvalService
-from google.adk.evaluation.simulation.user_simulator_provider import (
-    UserSimulatorProvider,
-)
-from google.adk.utils.context_utils import Aclosing
+# The local ADK eval engine is OPTIONAL — its deps (google-adk[eval]: rouge-score, gepa, …)
+# live in the agent's `eval` extra, not the runtime/CI install. The managed engine is the
+# default, and the pure helpers below (parse_verdict, load_agent, ensure_vertex_env) don't need
+# this stack — so a missing extra mustn't break import (e.g. unit tests in CI). We guard on it in
+# main() before the local path runs.
+try:
+    from google.adk.evaluation.base_eval_service import (
+        EvaluateConfig,
+        EvaluateRequest,
+        InferenceConfig,
+        InferenceRequest,
+    )
+    from google.adk.evaluation.eval_case import Invocation
+    from google.adk.evaluation.eval_config import (
+        EvalConfig,
+        get_eval_metrics_from_config,
+    )
+    from google.adk.evaluation.eval_set import EvalCase, EvalSet
+    from google.adk.evaluation.evaluator import EvalStatus
+    from google.adk.evaluation.in_memory_eval_sets_manager import (
+        InMemoryEvalSetsManager,
+    )
+    from google.adk.evaluation.local_eval_service import LocalEvalService
+    from google.adk.evaluation.simulation.user_simulator_provider import (
+        UserSimulatorProvider,
+    )
+    from google.adk.utils.context_utils import Aclosing
+
+    _LOCAL_ENGINE_AVAILABLE = True
+except ImportError:
+    _LOCAL_ENGINE_AVAILABLE = False
 
 # The GEAP Final Response Quality rater — the headline the threshold's bootstrap CI runs on.
 PRIMARY_METRIC = "rubric_based_final_response_quality_v1"
@@ -322,6 +332,13 @@ def main():
         print(f"final_response_quality={live['final_response_quality']:.3f} over {n} cases "
               f"(engine=managed){dest_note} -> {out_path}")
         return
+
+    if not _LOCAL_ENGINE_AVAILABLE:
+        raise SystemExit(
+            "Local eval engine unavailable: the ADK eval extra isn't installed.\n"
+            "  Install it:  pip install 'google-adk[eval]'   (rouge-score, gepa, …)\n"
+            "  Or use the managed engine:  --engine managed"
+        )
 
     ensure_vertex_env()
 
