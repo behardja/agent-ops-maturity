@@ -19,6 +19,8 @@ Level 2 adds CI/CD around the agent code: a PR runs tests (CI), then builds and 
 
 ## Getting started
 
+![diagram](notebooks/imgs/repo_user_journey.png)
+
 **0. Clone this code repository in your user environment**
 
 Two independent paths set up the same platform — pick one:
