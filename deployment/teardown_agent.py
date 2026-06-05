@@ -5,7 +5,8 @@ with --agent-dir; the agent's registered name comes from agents/<name>/agent.yam
 
 There is no `agents-cli` delete verb — deleting a deployed agent is SDK-only.
 This lists the project's Agent Runtimes, matches the one whose display_name equals
-this agent's name, and deletes it. It is called two ways:
+this agent's display_name (agent.yaml display_name, else name), and deletes it. It is
+called two ways:
 
   * the notebook teardown path (notebooks/05-teardown.ipynb), and
   * Terraform's destroy-time provisioner on the deploy null_resource
@@ -30,25 +31,26 @@ def teardown(agent_dir, project, region):
     import vertexai
     from vertexai import agent_engines
 
-    name = load_config(agent_dir).get("name", os.path.basename(agent_dir.rstrip("/")))
+    cfg = load_config(agent_dir)
+    # Match the engine the SAME way deploy_agent.py names it: by display_name (agent.yaml
+    # display_name, else name, else folder) — NOT the bare `name`, which would miss
+    # "Brand Guidelines Checker" when the agent name is "brand-guidelines-checker".
+    target = cfg.get("display_name") or cfg.get("name") or os.path.basename(agent_dir.rstrip("/"))
     vertexai.init(project=project, location=region)
 
-    # Match by display_name. deploy_agent.py creates the engine from the agent
-    # folder; depending on how your deploy names the resource you may need to
-    # adjust this predicate (e.g. match a name prefix or a label).
     deleted = []
     for ae in agent_engines.list():
         display_name = getattr(ae, "display_name", None) or getattr(
             getattr(ae, "api_resource", None), "display_name", None
         )
-        if display_name == name:
+        if display_name == target:
             ae.delete(force=True)
             deleted.append(getattr(ae, "resource_name", display_name))
 
     if deleted:
-        print(f"deleted Agent Runtime(s) for '{name}': {', '.join(map(str, deleted))}")
+        print(f"deleted Agent Runtime(s) for '{target}': {', '.join(map(str, deleted))}")
     else:
-        print(f"no deployed Agent Runtime found with display_name '{name}' — nothing to delete")
+        print(f"no deployed Agent Runtime found with display_name '{target}' — nothing to delete")
 
 
 def main():

@@ -1,7 +1,12 @@
 # CD — reusable workflow (called by pipeline.yml; not triggered on its own).
-# Builds + deploys the agent (source/container deploy) to STAGING, gates on the managed eval,
-# then promotes to PRODUCTION behind a manual approval. Keyless auth via WIF (inputs below).
-# Edit this file to change what "CD" does; the orchestrator (pipeline.yml) decides WHEN it runs.
+# Deploys the agent as a NEW REVISION of the single Agent Engine in the project (source/container,
+# update-in-place), eval-gates it, then holds a manual PRODUCTION-APPROVAL gate (best practice).
+#
+# IDEMPOTENT: every run updates the SAME engine in place (new revision) — reproducible, no extra
+# engines created. This is a single project/env, so 'production' is the human sign-off, NOT a
+# second deploy: re-deploying the same engine back-to-back is what caused the earlier update
+# conflict (code 13). In a multi-project setup, the promote job would deploy to the prod project.
+# Keyless auth via WIF (inputs below).
 name: CD
 
 on:
@@ -18,9 +23,8 @@ permissions:
   id-token: write   # keyless WIF
 
 jobs:
-  deploy-staging:
+  deploy:
     runs-on: ubuntu-latest
-    environment: staging
     steps:
       - uses: actions/checkout@v4
       - uses: google-github-actions/auth@v2
@@ -33,10 +37,10 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements-dev.txt
+      - name: Deploy a new revision (source/container, update-in-place)
+        run: python deployment/deploy_agent.py --source --project "${{ inputs.project_id }}" --region "${{ inputs.region }}" --agent-dir "${{ inputs.agent_dir }}"
       - name: Install managed-eval deps (the gate's client.evals needs the [evaluation] extra)
         run: pip install 'google-cloud-aiplatform[evaluation]'   # adds tqdm/sklearn/litellm/… for the already-pinned aiplatform
-      - name: Deploy to staging (source/container)
-        run: python deployment/deploy_agent.py --source --project "${{ inputs.project_id }}" --region "${{ inputs.region }}" --agent-dir "${{ inputs.agent_dir }}"
       - name: Managed-eval gate
         env:
           AGENT_DIR: ${{ inputs.agent_dir }}
@@ -51,30 +55,23 @@ jobs:
                        .get("rubric_based_final_response_quality_v1") or {}).get("threshold", 0.8)
           frq = result.get("final_response_quality", 0.0)
           print(f"final_response_quality={frq} threshold={threshold}")
-          raise SystemExit(0 if frq >= threshold else 1)   # non-zero -> blocks promotion
+          raise SystemExit(0 if frq >= threshold else 1)   # non-zero -> fails the pipeline (regression)
           PY
-      - name: Agent Identity & least-privilege gate (described — not yet enforced)
+      - name: Agent Identity & least-privilege (described)
         run: |
-          echo "Post-deploy gate (described): verify the deployed agent's Agent Identity (SPIFFE)"
-          echo "is issued and that IAM on its principal stays least-privilege before promoting."
-          echo "Runtime SPIFFE verification needs the live agent (a partly-Preview surface); the"
-          echo "static least-privilege lint already ran in CI (tests/test_identity.py). See NB6."
+          echo "Agent Identity (SPIFFE) is auto-issued at deploy; the static least-privilege"
+          echo "lint already ran in CI (tests/test_identity.py). Runtime SPIFFE verification"
+          echo "needs the live agent (a partly-Preview surface) — see NB6."
 
-  deploy-production:
-    needs: deploy-staging
+  promote-production:
+    needs: deploy
     runs-on: ubuntu-latest
-    environment: production   # add a "required reviewers" rule -> manual approval gate
+    environment: production   # add a "required reviewers" rule -> the manual approval gate (best practice)
     steps:
-      - uses: actions/checkout@v4
-      - uses: google-github-actions/auth@v2
-        with:
-          project_id: ${{ inputs.project_id }}
-          workload_identity_provider: ${{ inputs.workload_identity_provider }}
-          service_account: ${{ inputs.service_account }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-      - run: pip install -r requirements-dev.txt
-      - name: Promote to production
-        run: python deployment/deploy_agent.py --source --project "${{ inputs.project_id }}" --region "${{ inputs.region }}" --agent-dir "${{ inputs.agent_dir }}"
+      - name: Production approval (manual gate)
+        run: |
+          echo "Manual production approval recorded (best-practice gate)."
+          echo "Single project/env: the new revision deployed + eval-gated by 'deploy' is already"
+          echo "serving, so this step is the human sign-off — NOT a second deploy (re-deploying the"
+          echo "same engine back-to-back caused the earlier update conflict). In a multi-project"
+          echo "setup, this job would deploy to the production project."
