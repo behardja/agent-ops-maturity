@@ -48,7 +48,7 @@ terraform -chdir=cicd apply                    # WIF + Artifact Registry + the P
 
 Each notebook provisions the services it needs and demonstrates one Agent Ops step. This is the imperative twin of Path A — you do **not** need to run Terraform first.
 
-#### L1 — Continuous Iteration (includes the Quality Flywheel)
+#### Level 1 — Continuous Iteration (includes the Quality Flywheel)
 
 **1. Deploy the agent**
 
@@ -66,13 +66,13 @@ Each notebook provisions the services it needs and demonstrates one Agent Ops st
 
 * [04-canary-rollback.ipynb](./notebooks/04-canary-rollback.ipynb) : The protect half of the loop — roll back a regressed revision by shifting traffic to the previous one (manual + runnable; automated rollback described). Protects staging only.
 
-#### L2 — CI/CD
+#### Level 2 — CI/CD
 
-**5. CI — automated tests (Level 2)**
+**5. CI — automated tests**
 
 * [05-ci-tests.ipynb](./notebooks/05-ci-tests.ipynb) : Writes and runs the test suite (Central + Agent-specific) that the reusable `ci.yml` GitHub Actions workflow runs on every PR. No cloud credentials needed.
 
-**6. CD — build & deploy pipeline (Level 2)**
+**6. CD — build & deploy pipeline**
 
 * [06-cd-pipeline.ipynb](./notebooks/06-cd-pipeline.ipynb) : Provisions the keyless CI/CD infra (`cicd/` Terraform: WIF + Artifact Registry) and generates `pipeline.yml`, which runs `ci.yml → cd.yml` on a PR — staging auto, production manual.
 
