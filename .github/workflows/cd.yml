@@ -33,6 +33,8 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements-dev.txt
+      - name: Install managed-eval deps (the gate's client.evals needs the [evaluation] extra)
+        run: pip install 'google-cloud-aiplatform[evaluation]'   # adds tqdm/sklearn/litellm/… for the already-pinned aiplatform
       - name: Deploy to staging (source/container)
         run: python deployment/deploy_agent.py --source --project "${{ inputs.project_id }}" --region "${{ inputs.region }}" --agent-dir "${{ inputs.agent_dir }}"
       - name: Managed-eval gate
