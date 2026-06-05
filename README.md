@@ -38,10 +38,11 @@ terraform init && terraform apply
 terraform apply -var deploy_agent=true         # when ready to deploy the agent
 ```
 
-L2 CI/CD infra — the separate `cicd/` folder (keyless WIF + Artifact Registry). It also generates `.github/workflows/pipeline.yml` from this project's values. See `cicd/README.md`.
+L2 CI/CD infra — the separate `cicd/` folder (keyless WIF + Artifact Registry). The workflows (`ci.yml`, `cd.yml`, `pipeline.yml`) are committed and generic; `apply` provisions the infra **and** sets the four GitHub repo variables `pipeline.yml` reads (via `gh`, using your `gh auth`). See `cicd/README.md`.
 
 ```bash
-terraform -chdir=cicd apply                    # WIF + Artifact Registry + the PR pipeline
+gh auth login                                  # once, if not already — apply uses it to set the repo variables
+terraform -chdir=cicd apply                    # WIF + Artifact Registry + sets the four repo variables
 ```
 
 ### Path B — Notebooks (learning)
@@ -52,7 +53,7 @@ Each notebook provisions the services it needs and demonstrates one Agent Ops st
 
 **1. Deploy the agent**
 
-* [01-deploy-agent.ipynb](./notebooks/01-deploy-agent.ipynb) : Deploys the example agent onto the managed Agent Runtime as a container built from source. Doubles as the telemetry-wiring check (Cloud Trace, Cloud Logging, Agent Identity) and auto-registers the revision in Agent Registry. (`01b-deploy-agent-pickle-WIP.ipynb` is the legacy pickle-deploy variant, out of sequence.)
+* [01-deploy-agent.ipynb](./notebooks/01-deploy-agent.ipynb) : Deploys the example agent onto the managed Agent Runtime as a container built from source. Doubles as the telemetry-wiring check (Cloud Trace, Cloud Logging, Agent Identity) and auto-registers the revision in Agent Registry.
 
 **2. Continuous evaluation**
 
@@ -74,11 +75,9 @@ Each notebook provisions the services it needs and demonstrates one Agent Ops st
 
 **6. CD — build & deploy pipeline**
 
-* [06-cd-pipeline.ipynb](./notebooks/06-cd-pipeline.ipynb) : Provisions the keyless CI/CD infra (`cicd/` Terraform: WIF + Artifact Registry) and generates `pipeline.yml`, which runs `ci.yml → cd.yml` on a PR — staging auto, production manual.
+* [06-cd-pipeline.ipynb](./notebooks/06-cd-pipeline.ipynb) : Provisions the keyless CI/CD infra (`cicd/` Terraform: WIF + Artifact Registry) and sets the repo variables the committed `pipeline.yml` reads, which runs `ci.yml → cd.yml` on a PR — staging auto, production manual.
 
 #### Cleanup
-
-**7. Teardown**
 
 * [07-teardown.ipynb](./notebooks/07-teardown.ipynb) : Tears down everything NB1–06 created (the agent, observability, the L2 CI/CD infra, and GCS buckets).
 
@@ -93,7 +92,11 @@ Ensure the project environment, network settings, and service accounts used have
 - `Cloud Functions`
 - `IAM` (Workload Identity Federation, for the L2 CI/CD path)
 
-Local tooling: `gcloud` (with Application Default Credentials), `terraform`, and — for the L2 CI/CD path — the GitHub CLI `gh`. Install `requirements-dev.txt` to run the tests locally.
+Local tooling:
+- `gcloud` (with Application Default Credentials)
+- `terraform`
+- `gh` (GitHub CLI) — for the L2 CI/CD path
+- `requirements-dev.txt` — install to run the tests locally
 
 ## Add an agent
 
@@ -129,14 +132,15 @@ The repo scales by folders. Each agent is an **agents-cli project** (the officia
 │           └── dashboard.json            : Quality + operational metrics overview.
 ├── terraform                             : Path A — L1 platform as IaC; discovers agents via fileset(), one module per agent.
 │   └── modules/agent_ops                 : Per-agent ops stack (SA+IAM, bucket, metric, alert, trigger).
-├── cicd                                  : L2 CI/CD infra (keyless WIF + Artifact Registry); renders pipeline.yml.
-│   ├── wif.tf                            : Workload Identity Federation + deployer SA + Artifact Registry.
-│   ├── pipeline.tf                       : Renders .github/workflows/pipeline.yml from the outputs.
-│   ├── pipeline.yml.tftpl                : Template for the PR orchestrator (ci.yml → cd.yml).
+├── cicd                                  : L2 CI/CD infra (keyless WIF + Artifact Registry).
+│   ├── wif.tf                            : Workload Identity Federation + deployer SA + Artifact Registry; outputs the four pipeline vars.
+│   ├── pipeline_vars.tf                  : Sets the four GitHub repo variables pipeline.yml reads (terraform_data + local-exec via gh).
+│   ├── versions.tf                       : Provider requirements for the cicd/ config.
 │   └── README.md                         : One-time CI/CD setup runbook.
-├── .github/workflows                     : Reusable GitHub Actions workflows.
-│   ├── ci.yml                            : CI — lint + pytest (called on a PR).
-│   └── cd.yml                            : CD — deploy → managed-eval gate → manual prod (called on a PR).
+├── .github/workflows                     : GitHub Actions workflows (committed + generic).
+│   ├── ci.yml                            : CI — lint + pytest (reusable; called on a PR).
+│   ├── cd.yml                            : CD — deploy → managed-eval gate → manual prod (reusable; called on a PR).
+│   └── pipeline.yml                      : PR orchestrator (ci.yml → cd.yml); reads project values from repo variables.
 ├── loop                                  : Shared loop driver (heart of L1) — pointed via --agent-dir.
 │   ├── run_ct_loop.py                    : trigger → hill climb → evaluate → threshold → deploy.
 │   ├── gepa_optimize.py                  : Prompt optimization candidate (ADK GEPA optimizer).

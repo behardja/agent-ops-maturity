@@ -125,6 +125,16 @@ resource "google_artifact_registry_repository" "agents" {
   depends_on    = [google_project_service.required]
 }
 
+# The four values the committed pipeline.yml needs as GitHub repo variables
+# (set via `gh variable set <NAME> --body "$(terraform -chdir=cicd output -raw <name>)"`).
+output "project_id" {
+  value = local.project_id
+}
+
+output "region" {
+  value = local.region
+}
+
 output "workload_identity_provider" {
   value = google_iam_workload_identity_pool_provider.github.name
 }

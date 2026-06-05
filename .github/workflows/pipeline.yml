@@ -1,0 +1,33 @@
+# CI/CD orchestrator — committed + generic. Runs ci.yml -> cd.yml on a PR to main.
+# Project-specific values come from GitHub repository VARIABLES, not committed literals, so this
+# file is identical in every clone. Set them once (values from `terraform -chdir=cicd output`):
+#   gh variable set GCP_PROJECT_ID --body <project-id>
+#   gh variable set GCP_REGION     --body <region>
+#   gh variable set WIF_PROVIDER   --body "$(terraform -chdir=cicd output -raw workload_identity_provider)"
+#   gh variable set DEPLOYER_SA    --body "$(terraform -chdir=cicd output -raw deployer_service_account)"
+name: CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  cd:
+    needs: ci
+    uses: ./.github/workflows/cd.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      project_id: ${{ vars.GCP_PROJECT_ID }}
+      region: ${{ vars.GCP_REGION }}
+      agent_dir: agents/brand-guidelines-checker
+      workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+      service_account: ${{ vars.DEPLOYER_SA }}
