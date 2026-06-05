@@ -1,6 +1,10 @@
 # Dev / CI dependencies. Installs the agent's runtime stack (so the eval/loop modules
 # import) plus the test + lint tooling. CI installs this; it needs NO Google Cloud creds
 # because the unit tests don't make cloud calls.
+#
+# NOT installed here: the local ADK eval engine extra (google-adk[eval]: rouge-score, gepa, …).
+# It's only needed for `run_eval.py --engine local`; the default managed engine and the unit
+# tests don't use it, so CI stays lean. To run the local engine: pip install 'google-adk[eval]'.
 -r agents/brand-guidelines-checker/requirements.txt
 pytest>=8
 PyYAML>=6
