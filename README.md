@@ -21,13 +21,15 @@ Level 2 adds CI/CD around the agent code: a PR runs tests (CI), then builds and 
 
 ![diagram](notebooks/imgs/repo_user_journey.png)
 
-**0. Clone this code repository in your user environment**
+**1. Clone the repo**
 
-Two independent paths set up the same platform — pick one:
-- **Terraform (automated)** — stand up the whole platform as IaC.
-- **Notebooks (learning)** — step through each Agent Ops stage by hand.
+**2. Update `configs/defaults.yaml`** — set `project.id`, `project.region`, and `cicd.github_repo` (your `owner/repo`).
 
 Config has two layers both Terraform and the runtime scripts read, so they never drift: `configs/defaults.yaml` (project id/region + global fallbacks + the CI/CD repo) and each `agents/<name>/agent.yaml` (that agent's model, eval policy, monitor thresholds, canary %).
+
+**3. Choose your setup path (run EITHER)** — two independent paths set up the same platform:
+- **Path A — Terraform (automated)** — stand up the whole platform as IaC.
+- **Path B — Notebooks (learning)** — step through each Agent Ops stage by hand.
 
 ### Path A — Terraform (automated)
 
@@ -47,9 +49,9 @@ gh auth login                                  # once, if not already — apply 
 terraform -chdir=cicd apply                    # WIF + Artifact Registry + sets the four repo variables
 ```
 
-### Path B — Notebooks (learning)
+### Path B — Notebooks (intended for learning)
 
-Each notebook provisions the services it needs and demonstrates one Agent Ops step. This is the imperative twin of Path A — you do **not** need to run Terraform first.
+Each notebook provisions the services needed to walthrough the Agent Ops steps. This is a functional twin of Path A so you do **not** need to run Terraform first.
 
 #### Level 1 — Continuous Iteration (includes the Quality Flywheel)
 
@@ -82,6 +84,15 @@ Each notebook provisions the services it needs and demonstrates one Agent Ops st
 #### Cleanup
 
 * [07-teardown.ipynb](./notebooks/07-teardown.ipynb) : Tears down everything NB1–06 created (the agent, observability, the L2 CI/CD infra, and GCS buckets).
+
+
+**4. Create the GitHub Environments (Staging / Production)**
+
+In repo **Settings → Environments**, create separate environments (e.g. `staging` and `production`). Note: Following best practices, add a **required reviewer** to `production` which acts as the manual approval gate before prod deployments.
+
+**5. Push changes & open a Pull Request → CI/CD triggers**
+
+Push your changes to a branch and open a PR to `main`. `pipeline.yml` runs `ci.yml` (lint + tests) → `cd.yml`: deploy to **staging** → **managed-eval gate** → **production** (manual approval). Note: CI/CD runs coupled in sequence for demonstration purposes.
 
 ## Prerequisites
 
