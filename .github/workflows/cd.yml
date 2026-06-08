@@ -1,12 +1,13 @@
 # CD — reusable workflow (called by pipeline.yml; not triggered on its own).
-# Deploys the agent as a NEW REVISION of the single Agent Engine in the project (source/container,
-# update-in-place), eval-gates it, then holds a manual PRODUCTION-APPROVAL gate (best practice).
+# Mirrors the L1 loop's order — TEST, THEN SHIP: eval-gate the candidate first, and only deploy a
+# new revision of the single Agent Engine if it clears the threshold. Then a manual production-
+# approval gate (best practice).
 #
 # IDEMPOTENT: every run updates the SAME engine in place (new revision) — reproducible, no extra
-# engines created. This is a single project/env, so 'production' is the human sign-off, NOT a
-# second deploy: re-deploying the same engine back-to-back is what caused the earlier update
-# conflict (code 13). In a multi-project setup, the promote job would deploy to the prod project.
-# Keyless auth via WIF (inputs below).
+# engines. Single project/env, so 'production' is the human sign-off, NOT a second deploy
+# (re-deploying the same engine back-to-back caused the earlier update conflict, code 13).
+# The managed eval scores the LOCAL candidate (run_inference on the local agent), so it can gate
+# BEFORE the deploy — a regression never reaches the engine. Keyless auth via WIF (inputs below).
 name: CD
 
 on:
@@ -37,11 +38,9 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements-dev.txt
-      - name: Deploy a new revision (source/container, update-in-place)
-        run: python deployment/deploy_agent.py --source --project "${{ inputs.project_id }}" --region "${{ inputs.region }}" --agent-dir "${{ inputs.agent_dir }}"
-      - name: Install managed-eval deps (the gate's client.evals needs the [evaluation] extra)
+      - name: Install managed-eval deps (client.evals needs the [evaluation] extra)
         run: pip install 'google-cloud-aiplatform[evaluation]'   # adds tqdm/sklearn/litellm/… for the already-pinned aiplatform
-      - name: Managed-eval gate
+      - name: Eval gate (test the candidate BEFORE deploying — mirrors the L1 loop)
         env:
           AGENT_DIR: ${{ inputs.agent_dir }}
         run: |
@@ -55,8 +54,10 @@ jobs:
                        .get("rubric_based_final_response_quality_v1") or {}).get("threshold", 0.8)
           frq = result.get("final_response_quality", 0.0)
           print(f"final_response_quality={frq} threshold={threshold}")
-          raise SystemExit(0 if frq >= threshold else 1)   # non-zero -> fails the pipeline (regression)
+          raise SystemExit(0 if frq >= threshold else 1)   # non-zero -> stop, do NOT deploy
           PY
+      - name: Deploy a new revision (source/container, update-in-place) — only if the gate passed
+        run: python deployment/deploy_agent.py --source --project "${{ inputs.project_id }}" --region "${{ inputs.region }}" --agent-dir "${{ inputs.agent_dir }}"
       - name: Agent Identity & least-privilege (described)
         run: |
           echo "Agent Identity (SPIFFE) is auto-issued at deploy; the static least-privilege"

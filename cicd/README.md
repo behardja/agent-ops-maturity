@@ -16,7 +16,7 @@ Three files, separation of concerns:
 | File | Trigger | Role |
 |---|---|---|
 | `.github/workflows/ci.yml` | `workflow_call` (reusable) | lint + pytest — edited independently |
-| `.github/workflows/cd.yml` | `workflow_call` (reusable) | deploy → managed-eval gate → manual prod — edited independently |
+| `.github/workflows/cd.yml` | `workflow_call` (reusable) | eval gate → deploy a new revision → manual prod sign-off — edited independently |
 | `.github/workflows/pipeline.yml` | **`pull_request` → `main`** | thin orchestrator: runs `ci.yml`, then `cd.yml` (`cd needs ci`) — **committed**; reads env-specific values from GitHub repo **variables** |
 
 All three are committed and generic — they're identical in every clone. `cd.yml` takes inputs;
@@ -75,14 +75,16 @@ gh variable set DEPLOYER_SA    --body "$(terraform -chdir=cicd output -raw deplo
 gh variable list               # verify the four are set
 ```
 
-## 3. GitHub Environments (the manual prod gate)
-In **repo Settings → Environments**, create `staging` and `production`. On **production**, add a
-**Required reviewers** rule — that's the manual approval gate before the prod deploy.
+## 3. GitHub Environments (the manual prod sign-off)
+In **repo Settings → Environments**, create `production` and add a **Required reviewers** rule —
+that's the manual approval. Single project/engine, so it's the human sign-off after deploy (in a
+multi-project setup it would gate a deploy to the prod project).
 
 ## What runs when
-- **PR to `main`** → `pipeline.yml` runs `ci.yml` (lint + tests); if it passes, `cd.yml` deploys to
-  **staging** (`deploy_agent.py --source`) → **managed-eval gate** → **production** waits for manual
-  approval. **Nothing runs on push** to any branch.
+- **PR to `main`** → `pipeline.yml` runs `ci.yml` (lint + tests); if it passes, `cd.yml` runs the
+  **managed-eval gate** on the candidate, then **deploys a new revision** (`deploy_agent.py --source`,
+  update-in-place on the single engine — idempotent), then **production** waits for the manual
+  approval sign-off. Same test-then-ship order as the L1 loop. **Nothing runs on push** to any branch.
 
 ## Why not `agents-cli infra cicd`?
 agents-cli's `infra cicd` provisions CI/CD for a **single** agents-cli project and wires the repo via

@@ -15,7 +15,7 @@ The example agent(**retail brand-guidelines checker**) consists of a single-turn
 
 L1 wraps Google's Quality Flywheel (*evaluate → analyze → optimize*, the `hill climb` step) with the operational pieces that earn the Continuous Training label: a production trigger, a threshold check, and a canary deploy into staging. 
 
-Level 2 adds CI/CD around the agent code: a PR runs tests (CI), then builds and deploys (CD), staging automatically and production behind a manual approval.
+Level 2 adds CI/CD around the agent code: a PR runs tests (CI), then eval-gates the candidate and deploys a new revision (CD) — the same test-then-ship order as the L1 loop — with a manual production approval as the sign-off.
 
 ## Getting started
 
@@ -79,7 +79,7 @@ Each notebook provisions the services needed to walthrough the Agent Ops steps. 
 
 **6. CD — build & deploy pipeline**
 
-* [06-cd-pipeline.ipynb](./notebooks/06-cd-pipeline.ipynb) : Provisions the keyless CI/CD infra (`cicd/` Terraform: WIF + Artifact Registry) and sets the repo variables the committed `pipeline.yml` reads, which runs `ci.yml → cd.yml` on a PR — staging auto, production manual.
+* [06-cd-pipeline.ipynb](./notebooks/06-cd-pipeline.ipynb) : Provisions the keyless CI/CD infra (`cicd/` Terraform: WIF + Artifact Registry) and sets the repo variables the committed `pipeline.yml` reads, which runs `ci.yml → cd.yml` on a PR — eval gate → deploy a new revision → manual production approval (sign-off).
 
 #### Cleanup
 
@@ -88,11 +88,11 @@ Each notebook provisions the services needed to walthrough the Agent Ops steps. 
 
 **4. Create the GitHub Environments (Staging / Production)**
 
-In repo **Settings → Environments**, create separate environments (e.g. `staging` and `production`). Note: Following best practices, add a **required reviewer** to `production` which acts as the manual approval gate before prod deployments.
+In repo **Settings → Environments**, create a `production` environment and add a **required reviewer** — the manual approval that gates the production sign-off (best practice). Single project/engine, so this is the human sign-off step; in a multi-project setup it would gate a deploy to the prod project.
 
 **5. Push changes & open a Pull Request → CI/CD triggers**
 
-Push your changes to a branch and open a PR to `main`. `pipeline.yml` runs `ci.yml` (lint + tests) → `cd.yml`: deploy to **staging** → **managed-eval gate** → **production** (manual approval). Note: CI/CD runs coupled in sequence for demonstration purposes.
+Push your changes to a branch and open a PR to `main`. `pipeline.yml` runs `ci.yml` (lint + tests) → `cd.yml`: **eval gate** → **deploy a new revision** (single engine, update-in-place) → **manual production approval** (sign-off). Note: CI/CD runs coupled in sequence for demonstration purposes.
 
 ## Prerequisites
 
@@ -152,7 +152,7 @@ The repo scales by folders. Each agent is an **agents-cli project** (the officia
 │   └── README.md                         : One-time CI/CD setup runbook.
 ├── .github/workflows                     : GitHub Actions workflows (committed + generic).
 │   ├── ci.yml                            : CI — lint + pytest (reusable; called on a PR).
-│   ├── cd.yml                            : CD — deploy → managed-eval gate → manual prod (reusable; called on a PR).
+│   ├── cd.yml                            : CD — eval gate → deploy revision → manual prod sign-off (reusable; called on a PR).
 │   └── pipeline.yml                      : PR orchestrator (ci.yml → cd.yml); reads project values from repo variables.
 ├── loop                                  : Shared loop driver (heart of L1) — pointed via --agent-dir.
 │   ├── run_ct_loop.py                    : trigger → hill climb → evaluate → threshold → deploy.
