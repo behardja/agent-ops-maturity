@@ -88,7 +88,7 @@ Each notebook provisions the services needed to walthrough the Agent Ops steps. 
 
 **4. Create the GitHub Environments (Staging / Production)**
 
-In repo **Settings → Environments**, create a `production` environment and add a **required reviewer** — the manual approval that gates the production sign-off (best practice). Single project/engine, so this is the human sign-off step; in a multi-project setup it would gate a deploy to the prod project.
+In repo **Settings → Environments**, create separate tiered environments, e.g. `production` with a **required reviewer** to manage the manual approval that gates the production sign-off (best practice).
 
 **5. Push changes & open a Pull Request → CI/CD triggers**
 
