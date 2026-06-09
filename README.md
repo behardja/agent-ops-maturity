@@ -13,7 +13,7 @@ The example agent(**retail brand-guidelines checker**) consists of a single-turn
 ![diagram](notebooks/imgs/agentops_overview.png)
 
 
-Level 1 wraps Google's Quality Flywheel (*evaluate → analyze → optimize*, the `hill climb` step) with the operational pieces that earn the Continuous Training label: a production trigger, a threshold check, and a canary deploy into staging. 
+Level 1 wraps Google's Quality Flywheel (*evaluate → analyze → optimize*, the `hill climb` step) with the operational components for a continuous iteration, such as a production trigger, a threshold check, and a canary deploy into staging. 
 
 Level 2 adds CI/CD around the agent code: a PR runs tests (CI), then eval-gates the candidate and deploys a new revision (CD) — the same test-then-ship order as the L1 loop — with a manual production approval as the sign-off.
 
