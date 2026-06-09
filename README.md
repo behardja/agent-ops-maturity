@@ -13,7 +13,7 @@ The example agent(**retail brand-guidelines checker**) consists of a single-turn
 ![diagram](notebooks/imgs/agentops_overview.png)
 
 
-L1 wraps Google's Quality Flywheel (*evaluate → analyze → optimize*, the `hill climb` step) with the operational pieces that earn the Continuous Training label: a production trigger, a threshold check, and a canary deploy into staging. 
+Level 1 wraps Google's Quality Flywheel (*evaluate → analyze → optimize*, the `hill climb` step) with the operational pieces that earn the Continuous Training label: a production trigger, a threshold check, and a canary deploy into staging. 
 
 Level 2 adds CI/CD around the agent code: a PR runs tests (CI), then eval-gates the candidate and deploys a new revision (CD) — the same test-then-ship order as the L1 loop — with a manual production approval as the sign-off.
 
@@ -88,11 +88,11 @@ Each notebook provisions the services needed to walthrough the Agent Ops steps. 
 
 **4. Create the GitHub Environments (Staging / Production)**
 
-In repo **Settings → Environments**, create a `production` environment and add a **required reviewer** — the manual approval that gates the production sign-off (best practice). Single project/engine, so this is the human sign-off step; in a multi-project setup it would gate a deploy to the prod project.
+In repo **Settings → Environments**, create separate tiered environments, e.g. `production` with a **required reviewer** to manage the manual approval that gates the production sign-off (best practice).
 
 **5. Push changes & open a Pull Request → CI/CD triggers**
 
-Push your changes to a branch and open a PR to `main`. `pipeline.yml` runs `ci.yml` (lint + tests) → `cd.yml`: **eval gate** → **deploy a new revision** (single engine, update-in-place) → **manual production approval** (sign-off). Note: CI/CD runs coupled in sequence for demonstration purposes.
+Push your changes to a branch and open a PR to `main`. `pipeline.yml` runs `ci.yml` (lint + tests) → `cd.yml`: **eval gate** → **deploy a new revision** (single engine, update-in-place) → **manual production approval** (sign-off). Note: CI/CD runs coupled in sequence from a PR for demonstration purposes.
 
 ## Prerequisites
 
@@ -113,18 +113,18 @@ Local tooling:
 
 ## Add an agent
 
-The repo scales by folders. Each agent is an **agents-cli project** (the official `app/` structure + deploy) with our **maturity layer** (`eval/`, `observability/`, `agent.yaml`) on top. See [`agents/README.md`](./agents/README.md) for the two BYOA paths in detail. To onboard one:
+The repo scales by agent folders. Each agent is an **agents-cli project** (the official `app/` structure + deploy) with our **maturity layer** (`eval/`, `observability/`, `agent.yaml`) on top. See [`agents/README.md`](./agents/README.md) for the two BYOA paths in detail. To onboard one:
 
 1. **Scaffold the structure with agents-cli:** `agents-cli create <name> -o agents/ -a adk -d agent_runtime --cicd-runner skip --prototype` → writes `agents/<name>/app/agent.py` + `agents-cli-manifest.yaml` + `pyproject.toml`. Set `region: us-central1` in the manifest. Folder name is kebab-case, ≤ 30 chars.
 2. **Layer the maturity bits** (copy from `brand-guidelines-checker/` and adapt): `agent.yaml`, `eval/{golden.evalset.json, criteria.json, weak_instruction.txt}`, `observability/{metric,alert,canary_alert,monitor}.yaml` + `dashboard.json`.
 3. Re-run `terraform apply` — `terraform/main.tf` discovers the folder via `fileset()` and instantiates the `agent_ops` module for it (its own SA, bucket, metric, alert, trigger topic, dashboard).
 4. Drive it with the shared engine by passing `--agent-dir agents/<name>` to `eval_tool/run_eval.py`, `loop/run_ct_loop.py`, and `deployment/deploy_agent.py` (deploy defaults to `agents-cli deploy`).
 
-> Tip: point an AI coding assistant at **`skills/add-agent.md`** to do steps 1–2 automatically.
+> Tip: point an AI coding assistant to  **`skills/add-agent.md`** to automate steps 1–2.
 
 ## Repo folder structure
 
-```bash
+```text
 .
 ├── agents                                : One folder per agent (managed in Agent Registry); shared engine points here via --agent-dir.
 │   └── brand-guidelines-checker          : The canonical L1 example agent (agents-cli `app/` shape + our maturity layer).
@@ -179,7 +179,7 @@ The repo scales by folders. Each agent is an **agents-cli project** (the officia
 └── requirements-dev.txt                  : Dev/test dependencies (pytest, ruff, ...).
 ```
 
-The split is **per-agent data/specs vs. shared engine**: an agent folder holds its source, config, golden set, and monitor specs; `loop/`, `eval_tool/`, and `deployment/` hold one copy of the engine every agent reuses. (Note the two senses of "eval": `eval_tool/` is the shared *threshold-check tool*; `agents/<name>/eval/` is that agent's *test data*.)
+Everything unique to an agent lives in its own folder (`agents/<name>/`): its source, config, evaluation set (golden cases + criteria), and monitor specs. Everything shared across agents lives once in `loop/`, `eval_tool/`, and `deployment/`.
 
 ## Future work
 
