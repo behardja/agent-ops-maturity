@@ -8,8 +8,8 @@
 # scripts target it with --agent-dir. Nothing agent-specific belongs here.
 
 project:
-  id: sandbox-401718        # GCP project id
-  region: us-central1
+  id: sandbox-401718        # param — GCP project id (fill in)
+  region: us-central1       # param — GCP region (fill in)
 
 # Global fallbacks, applied when an agent.yaml omits the field. These mirror the
 # try() defaults in terraform/modules/agent_ops/main.tf — keep them in sync.
@@ -28,4 +28,4 @@ defaults:
 # CI/CD inputs, read by cicd/wif.tf (the WIF/Artifact-Registry Terraform). Not secrets —
 # github_repo is just "owner/repo". Leave blank until you wire CI/CD; wif.tf requires it.
 cicd:
-  github_repo: "behardja/agent-ops-maturity"           # e.g. my-org/agent-ops-maturity
+  github_repo: "behardja/agent-ops-maturity"           # param — your "owner/repo" (fill in)
