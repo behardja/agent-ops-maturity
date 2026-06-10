@@ -1,4 +1,4 @@
-# Agent Ops Maturity on Google Cloud (L1 → L2)
+# Agent Ops Maturity on Google Cloud
 
 This repo is a **baseline for operationalizing agent development** on Google Cloud, bringing **MLOps foundations** to the agent life cycle. It demonstrates **Agent Ops maturity** in two levels: 
 * **Level 1 (Continuous Iteration)**, the MLOps improve/deploy loop
@@ -183,7 +183,7 @@ Everything unique to an agent lives in its own folder (`agents/<name>/`): its so
 
 ## Future work
 
-The repo ships one example today (`brand-guidelines-checker` — single-turn, no tools). Planned examples extend it by agent **shape** — each lights up a different slice of the evaluation rater catalog and exercises the shared engine (`loop/`, `eval_tool/`, `deployment/`, `terraform/`) unchanged:
+The repo ships one example today (`brand-guidelines-checker` — single-turn, no tools). Planned examples extend it by agent **shape** where each lights up a different slice of the evaluation rater catalog and maintains the shared engine (`loop/`, `eval_tool/`, `deployment/`, `terraform/`):
 - **Tool-calling agents** — tool-use quality + trajectory raters (e.g. an order-status / returns assistant).
 - **RAG agents** — retrieval grounding, with the hallucination / reference-based raters that need grounding context.
 - **Multi-turn conversational agents** — Task Success (multi-turn, reference-free).
@@ -191,7 +191,7 @@ The repo ships one example today (`brand-guidelines-checker` — single-turn, no
 - **Multi-agent (A2A)** — agent-to-agent orchestration across several `agents/<name>/` folders.
 
 Beyond more agent shapes, planned lifecycle work:
-- **Integration & deployment to the Gemini Enterprise app** — publish the deployed agent into the Gemini Enterprise application so end users can discover and use it (e.g. `agents-cli publish gemini-enterprise`). Today the pipeline stops at Agent Runtime + Agent Registry; this closes the loop from build → ops → end-user access.
+- **Integration & deployment to the Gemini Enterprise app** — publish the deployed agent into the Gemini Enterprise application so end users can discover and use it (e.g. `agents-cli publish gemini-enterprise`).
 
 ## References
 
