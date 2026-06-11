@@ -9,7 +9,7 @@ Let the official tool write the structure:
 agents-cli create <name> -o agents/ -a adk -d agent_runtime --cicd-runner skip --prototype
 ```
 - Writes `agents/<name>/app/` + `agents-cli-manifest.yaml` + `pyproject.toml`.
-- Set `region: us-central1` in the manifest.
+- Set `region: us-central1` and `deployable: true` in the manifest. `deployable: true` opts the agent into CD; omit it (or `false`) for a `--prototype` you want CI-tested but not shipped.
 - Then add the maturity layer (below). An AI coding assistant can do this by following `skills/add-agent.md`.
 
 ## Path 2 — bring your own (match the structure)
@@ -17,7 +17,7 @@ agents-cli create <name> -o agents/ -a adk -d agent_runtime --cicd-runner skip -
 Drop your existing ADK agent in and match this layout:
 - `app/agent.py`: exposes `root_agent` (ADK `Agent`) **and** `app = App(root_agent=root_agent, name="<snake_name>")`; sets `GOOGLE_GENAI_USE_VERTEXAI`; reads `MODEL` + `AGENT_INSTRUCTION_FILE` from env (the loop's hill-climb knobs).
 - `app/agent_runtime_app.py` + `app/app_utils/`: the agents-cli serving wrapper — copy from an existing agent, or run `agents-cli scaffold enhance .`.
-- `agents-cli-manifest.yaml`: `agent_directory: app`, `region: us-central1`, `deployment_target: agent_runtime`.
+- `agents-cli-manifest.yaml`: `agent_directory: app`, `region: us-central1`, `deployment_target: agent_runtime`, `deployable: true` (CD opt-in; omit for a not-yet-shipping prototype).
 - `pyproject.toml`: dependencies + an `eval` extra.
 
 ## Both paths — add the maturity layer
@@ -33,3 +33,4 @@ Copy from `brand-guidelines-checker/` and adapt:
 - `python -m pytest tests/` — the central contract auto-covers the new agent.
 - `terraform apply` discovers the folder via `fileset()` and stands up its ops stack.
 - Drive it: pass `--agent-dir agents/<name>` to `loop/run_ct_loop.py` / `eval_tool/run_eval.py`; deploy with `deployment/deploy_agent.py` (defaults to `agents-cli deploy`).
+- CD ships it automatically: on a PR, `pipeline.yml` detects the added/changed agent and runs eval-gate → deploy for **only** that agent (others untouched) — provided its manifest has `deployable: true`. A shared-code change (`loop/`, `eval_tool/`, `deployment/`) redeploys all deployable agents.

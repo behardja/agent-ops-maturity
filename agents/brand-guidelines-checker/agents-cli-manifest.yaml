@@ -1,6 +1,7 @@
 name: "brand-guidelines-checker"
 acli_version: "0.3.0"
 agent_directory: "app"
+deployable: true            # CD opt-in — false/absent => CI tests it, CD skips it (e.g. a prototype)
 region: "us-central1"
 base_template: "adk"
 language: "python"

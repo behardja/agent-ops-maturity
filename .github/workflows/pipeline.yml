@@ -1,6 +1,9 @@
-# CI/CD orchestrator — committed + generic. Runs ci.yml -> cd.yml on a PR to main.
-# Project-specific values come from GitHub repository VARIABLES, not committed literals, so this
-# file is identical in every clone. Set them once (values from `terraform -chdir=cicd output`):
+# CI/CD orchestrator — committed + generic. On a PR to main: ci.yml -> detect changed agents -> cd.yml (matrix).
+# CD is change-detected and per-agent: only agents added/modified in the PR (or all, on a shared-code change)
+# are eval-gated + deployed, each independently. Untouched agents are never rebuilt or redeployed.
+#
+# Project-specific values come from GitHub repository VARIABLES, not committed literals, so this file is
+# identical in every clone. Set them once (values from `terraform -chdir=cicd output`):
 #   gh variable set GCP_PROJECT_ID --body <project-id>
 #   gh variable set GCP_REGION     --body <region>
 #   gh variable set WIF_PROVIDER   --body "$(terraform -chdir=cicd output -raw workload_identity_provider)"
@@ -19,8 +22,31 @@ jobs:
   ci:
     uses: ./.github/workflows/ci.yml
 
-  cd:
+  detect:
     needs: ci
+    runs-on: ubuntu-latest
+    outputs:
+      agents: ${{ steps.scan.outputs.agents }}
+      has_agents: ${{ steps.scan.outputs.has_agents }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0            # full history so the script can diff against the PR base ref
+      - id: scan
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+        run: |
+          chmod +x .github/scripts/detect_changed_agents.sh
+          ./.github/scripts/detect_changed_agents.sh
+
+  cd:
+    needs: detect
+    if: needs.detect.outputs.has_agents == 'true'
+    strategy:
+      fail-fast: false              # one agent's failure must not block the others
+      max-parallel: 3               # cap concurrency: respect Agent Engine build quota / avoid code-13 collisions
+      matrix:
+        agent_dir: ${{ fromJSON(needs.detect.outputs.agents) }}
     uses: ./.github/workflows/cd.yml
     permissions:
       contents: read
@@ -28,6 +54,6 @@ jobs:
     with:
       project_id: ${{ vars.GCP_PROJECT_ID }}
       region: ${{ vars.GCP_REGION }}
-      agent_dir: agents/brand-guidelines-checker
+      agent_dir: ${{ matrix.agent_dir }}
       workload_identity_provider: ${{ vars.WIF_PROVIDER }}
       service_account: ${{ vars.DEPLOYER_SA }}
